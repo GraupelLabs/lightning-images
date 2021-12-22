@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+hydra-core = "==1.0.0rc4"
+omegaconf = ">=2.0.0"
+pytorch-lightning = "==0.9.0"
+scikit-learn = "*"
+opencv-python = "*"
+pandas = "*"
+albumentations = "*"
+torchvision = "*"
+
+[dev-packages]
+black = "*"
+pre-commit = "*"
+
+[requires]
+python_version = "3.8"
