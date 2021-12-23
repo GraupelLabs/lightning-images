@@ -73,7 +73,7 @@ def run_predictions(cfg, model, dataset):
     return report
 
 
-@hydra.main(config_path="config.yaml")
+@hydra.main(config_path="./", config_name="config")
 def main(cfg: DictConfig) -> None:
     """
     Run model inference on the validation dataset.

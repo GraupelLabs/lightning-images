@@ -73,6 +73,11 @@ def train_second_stage(cfg: DictConfig, classifier) -> None:
         if ckpt.endswith(".ckpt") and ckpt != "last.ckpt"
     ]
 
+    if len(checkpoints) == 0:
+        raise Exception(
+            "Cannot continue training. No checkpoints to restore the model from."
+        )
+
     best_checkpoint_path = checkpoints[0]
     stage1_checkpoint_name = cfg.training.first_stage.best_model_name
     os.rename(best_checkpoint_path, stage1_checkpoint_name)
@@ -132,7 +137,7 @@ def save_best_model(cfg: DictConfig) -> None:
     save_best(model, cfg)
 
 
-@hydra.main(config_name="config.yaml")
+@hydra.main(config_path="./", config_name="config")
 def train(cfg: DictConfig) -> None:
     """
     Run model training.
