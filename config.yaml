@@ -48,15 +48,17 @@ augmentations:
       - *post_transforms
 callbacks:
   early_stopping:
-    class_name: pl.callbacks.EarlyStopping
+    class_name: pytorch_lightning.callbacks.EarlyStopping
     params:
-      mode: ${training.mode}
+      monitor: val_loss
+      mode: min
       patience: 10
   model_checkpoint:
-    class_name: pl.callbacks.ModelCheckpoint
+    class_name: pytorch_lightning.callbacks.ModelCheckpoint
     params:
-      filepath: saved_models/
-      mode: ${training.mode}
+      dirpath: ${logging.checkpoints_path}
+      monitor: val_loss
+      mode: min
       save_last: True
       save_top_k: 1
 data:
@@ -66,7 +68,7 @@ data:
   images_folder_name: images
   image_size: 224
   labels_filename: tag2class.json
-  num_classes: 23
+  num_classes: 22
   num_workers: 0
   validation_split: 0.15
 debug:
@@ -81,6 +83,7 @@ logging:
   best_model_path: best_model/
   best_model_name: model.pth
   best_model_labels: ${data.labels_filename}
+  checkpoints_path: saved_models/
 model:
   backbone:
     class_name: torchvision.models.resnet18
@@ -100,19 +103,17 @@ testing:
   debug: ${debug.enabled}
 trainer:
   accumulate_grad_batches: 1
-  distributed_backend: dp
+  strategy: dp
   gpus: 1
   gradient_clip_val: 0.5
   num_sanity_val_steps: 0
   profiler: false
-  weights_summary: null
+  enable_model_summary: ${debug.enabled}
   deterministic: True
 training:
   debug: ${debug.enabled}
   learning_rate: 0.001
   loss: torch.nn.CrossEntropyLoss
-  metric: val_early_stop_on
-  mode: min
   seed: 42
   first_stage:
     epochs: 8
@@ -120,3 +121,4 @@ training:
   second_stage:
     epochs: 24
     learning_rate: 0.0003
+    best_model_name: stage2_model.ckpt

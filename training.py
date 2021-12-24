@@ -8,10 +8,11 @@ import pytorch_lightning as pl
 import resource
 
 from omegaconf import DictConfig
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from core.logger import get_logger
 from core.model import ImageClassifier
-from core.utils import flatten_omegaconf, save_best, set_seed
+from core.utils import save_model, set_seed
 
 
 def train_first_stage(cfg: DictConfig) -> ImageClassifier:
@@ -26,8 +27,7 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
     cfg : DictConfig
         Project configuration object
     """
-    hparams = flatten_omegaconf(cfg)
-    classifier = ImageClassifier(hparams=hparams, cfg=cfg)
+    classifier = ImageClassifier(cfg=cfg)
 
     callbacks = classifier.get_callbacks()
     loggers = classifier.get_loggers()
@@ -45,17 +45,28 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
 
     trainer = pl.Trainer(
         logger=loggers,
-        early_stop_callback=callbacks["early_stopping"],
-        checkpoint_callback=callbacks["model_checkpoint"],
+        callbacks=callbacks,
         max_epochs=cfg.training.first_stage.epochs,
         **cfg.trainer,
     )
     trainer.fit(classifier)
 
+    # Rename best checkpoint for the stage 1
+    checkpoints_callback = [
+        callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
+    ]
+    best_checkpoint_path = checkpoints_callback[0].best_model_path
+    get_logger().debug("Best checkpoint: ", best_checkpoint_path)
+
+    stage1_checkpoint_path = os.path.join(
+        cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
+    )
+    os.rename(best_checkpoint_path, stage1_checkpoint_path)
+
     return classifier
 
 
-def train_second_stage(cfg: DictConfig, classifier) -> None:
+def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
     """
     Run the second stage of the model training.
 
@@ -66,24 +77,11 @@ def train_second_stage(cfg: DictConfig, classifier) -> None:
     ----------
     cfg : DictConfig
         Project configuration object
+    classifier : ImageClassifier
+        Pytorch Lightning Module object
     """
-    checkpoints = [
-        ckpt
-        for ckpt in os.listdir("./")
-        if ckpt.endswith(".ckpt") and ckpt != "last.ckpt"
-    ]
-
-    if len(checkpoints) == 0:
-        raise Exception(
-            "Cannot continue training. No checkpoints to restore the model from."
-        )
-
-    best_checkpoint_path = checkpoints[0]
-    stage1_checkpoint_name = cfg.training.first_stage.best_model_name
-    os.rename(best_checkpoint_path, stage1_checkpoint_name)
-
-    callbacks = classifier.get_callbacks()
     loggers = classifier.get_loggers()
+    callbacks = classifier.get_callbacks()
 
     # Stage 2 -- all layers unfrozen
     get_logger().info("Stage 2 of the training from the best checkpoint.")
@@ -98,16 +96,30 @@ def train_second_stage(cfg: DictConfig, classifier) -> None:
 
     max_epochs = cfg.training.first_stage.epochs + cfg.training.second_stage.epochs
 
+    best_checkpoint_path = os.path.join(
+        cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
+    )
+
     trainer = pl.Trainer(
         logger=loggers,
-        early_stop_callback=callbacks["early_stopping"],
-        checkpoint_callback=callbacks["model_checkpoint"],
-        resume_from_checkpoint=stage1_checkpoint_name,
+        callbacks=callbacks,
         max_epochs=max_epochs,
         **cfg.trainer,
     )
 
-    trainer.fit(classifier)
+    trainer.fit(classifier, ckpt_path=best_checkpoint_path)
+
+    # Rename best checkpoint for the stage 1
+    checkpoints_callback = [
+        callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
+    ]
+    best_checkpoint_path = checkpoints_callback[0].best_model_path
+    get_logger().debug("Best checkpoint: ", best_checkpoint_path)
+
+    stage2_checkpoint_path = os.path.join(
+        cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
+    )
+    os.rename(best_checkpoint_path, stage2_checkpoint_path)
 
 
 def save_best_model(cfg: DictConfig) -> None:
@@ -119,22 +131,13 @@ def save_best_model(cfg: DictConfig) -> None:
     cfg : DictConfig
         Project configuration object
     """
-    hparams = flatten_omegaconf(cfg)
     get_logger().info("Saving model from the best checkpoint...")
-    checkpoints = [
-        ckpt
-        for ckpt in os.listdir("./")
-        if ckpt.endswith(".ckpt")
-        and ckpt != "last.ckpt"
-        and cfg.training.first_stage.best_model_name not in ckpt
-    ]
-    best_checkpoint_path = checkpoints[0]
 
-    model = ImageClassifier.load_from_checkpoint(
-        best_checkpoint_path, hparams=hparams, cfg=cfg
+    best_model_path = os.path.join(
+        cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
     )
-
-    save_best(model, cfg)
+    model = ImageClassifier.load_from_checkpoint(best_model_path, cfg=cfg)
+    save_model(model, cfg)
 
 
 @hydra.main(config_path="./", config_name="config")

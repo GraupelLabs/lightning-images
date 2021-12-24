@@ -125,7 +125,7 @@ def load_obj(obj_path: str, default_obj_path: str = "") -> Any:
     return getattr(module_obj, obj_name)
 
 
-def save_best(model: pl.LightningModule, cfg: DictConfig) -> None:
+def save_model(model: pl.LightningModule, cfg: DictConfig) -> None:
     """
     Save the entire model.
 

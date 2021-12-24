@@ -1,18 +1,17 @@
 """Image classification model class."""
 
-from typing import Dict, List
+from typing import List
 
 import cv2
 import os
-import pytorch_lightning as pl
 import torch
 
 from omegaconf import DictConfig
+from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks.base import Callback
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.metrics.functional import accuracy
 from torch import nn
+from torchmetrics import Accuracy
 
 from .dataset import get_training_dataset
 from .logger import get_logger
@@ -30,13 +29,14 @@ class Identity(nn.Module):
         return x
 
 
-class ImageClassifier(pl.LightningModule):
+class ImageClassifier(LightningModule):
     """Classification pytorch module."""
 
-    def __init__(self, hparams: DictConfig, cfg: DictConfig):
+    def __init__(self, cfg: DictConfig):
         super().__init__()
+        self.save_hyperparameters()
+
         self.cfg = cfg
-        self.hparams = hparams
 
         self.feature_extractor = load_obj(cfg.model.backbone.class_name)
         self.feature_extractor = self.feature_extractor(**cfg.model.backbone.params)
@@ -64,6 +64,7 @@ class ImageClassifier(pl.LightningModule):
         )
 
         self.criterion = load_obj(cfg.training.loss)()
+        self.accuracy = Accuracy()
 
     def _save_images(self, images, batch_id: int = 0, mode: str = "train") -> None:
         """TODO Add missing docstring."""
@@ -105,22 +106,20 @@ class ImageClassifier(pl.LightningModule):
         output = self.classifier(representations)
         return output
 
-    def get_callbacks(self) -> Dict[str, Callback]:
+    def get_callbacks(self) -> List[Callback]:
         """
         Get a list of pytorch callbacks for this model.
 
         Returns
         -------
-        Dict[str, Callback]
+        List[Callback]
             List of callbacks
         """
-        early_stopping = EarlyStopping(**self.cfg.callbacks.early_stopping.params)
-        model_checkpoint = ModelCheckpoint(**self.cfg.callbacks.model_checkpoint.params)
-
-        return {
-            "early_stopping": early_stopping,
-            "model_checkpoint": model_checkpoint,
-        }
+        callbacks = [
+            load_obj(callback.class_name)(**callback.params)
+            for callback in self.cfg.callbacks.values()
+        ]
+        return callbacks
 
     def get_loggers(self) -> List:
         """TODO Add missing docstring."""
@@ -148,6 +147,7 @@ class ImageClassifier(pl.LightningModule):
     def training_step(self, batch, batch_nb):
         """TODO Add missing docstring."""
         images, labels, _ = batch
+        batch_size = len(images)
         images = torch.stack(images, dim=0)
 
         if self.cfg.debug.enabled and self.cfg.debug.save_images:
@@ -158,10 +158,9 @@ class ImageClassifier(pl.LightningModule):
         labels_predicted = self(images)
 
         loss = self.criterion(labels_predicted, labels)
-        result = pl.TrainResult(loss)
-        result.log("train_loss", loss, on_epoch=True)
+        self.log("train_loss", loss, on_epoch=True, batch_size=batch_size)
 
-        return result
+        return loss
 
     def val_dataloader(self):
         """TODO Add missing docstring."""
@@ -178,6 +177,7 @@ class ImageClassifier(pl.LightningModule):
     def validation_step(self, batch, batch_nb):
         """TODO Add missing docstring."""
         images, labels, _ = batch
+        batch_size = len(images)
         images = torch.stack(images, dim=0)
 
         if self.cfg.debug.enabled and self.cfg.debug.save_images:
@@ -188,9 +188,16 @@ class ImageClassifier(pl.LightningModule):
         labels_predicted = self(images)
 
         val_loss = self.criterion(labels_predicted, labels)
-        val_acc = accuracy(labels_predicted, labels)
-        result = pl.EvalResult(checkpoint_on=val_loss, early_stop_on=val_loss)
-        result.log("val_loss", val_loss, on_epoch=True, prog_bar=True)
-        result.log("val_acc", val_acc, on_epoch=True, prog_bar=True)
+        self.accuracy(labels_predicted, labels)
+        self.log(
+            "val_loss", val_loss, on_epoch=True, prog_bar=True, batch_size=batch_size
+        )
+        self.log(
+            "val_acc",
+            self.accuracy,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch_size,
+        )
 
-        return result
+        return val_loss
