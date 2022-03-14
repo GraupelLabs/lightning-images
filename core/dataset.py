@@ -200,12 +200,22 @@ def prepare_dataset(cfg: DictConfig) -> None:
 
     for root, _, files in os.walk(images_folder_path):
         for cur_file_name in files:
-            cur_dir_name = os.path.basename(root.replace(images_folder_path, ""))
+            # Check that the file is in fact an image
+            file_ext = cur_file_name.split(".")[-1]
+            if file_ext.lower() not in ["png", "jpeg", "jpg"]:
+                continue
 
+            cur_dir_name = os.path.basename(root.replace(images_folder_path, ""))
             if cur_dir_name == "":
                 continue
 
             cur_filepath = os.path.join(root, cur_file_name)
+
+            # check that file is not empty (larger than 0 Bytes)
+            file_size = os.path.getsize(cur_filepath)
+            if file_size == 0:
+                continue
+
             image_paths.append(cur_filepath)
             image_classes.append(cur_dir_name)
 
