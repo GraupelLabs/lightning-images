@@ -41,7 +41,7 @@ Lightning Images is tested to work with [Grid AI](https://grid.ai) for cloud tra
 
 ```bash
 grid run --name --localdir \
-    --instance_type g3.8xlarge \
+    --instance_type 2_M60_8GB \
     --datastore_name cifar5 \
     --datastore_version 1 \
     --framework lightning \
