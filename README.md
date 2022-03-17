@@ -11,7 +11,7 @@ Training scripts for an end-to-end image classification based on Pytorch-Lightni
 
 3. Freeze pip dependencies (for cloud training only)
     ```
-    pip freeze > requirements.txt
+    pipenv lock -r > requirements.txt
     ```
 
 ## Model training
