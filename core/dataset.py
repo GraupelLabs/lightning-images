@@ -106,20 +106,14 @@ def data_ready(cfg: DictConfig) -> bool:
         True if dataset was generated, otherwise False
     """
     data_path = to_absolute_path(cfg.data.dataset_path)
-    images_folder_name = cfg.data.images_folder_name
-    dataset_filename = cfg.data.dataset_filename
-    labels_filename = cfg.data.labels_filename
+    dataset_file = to_absolute_path(cfg.data.dataset_file_path)
+    labels_file = to_absolute_path(cfg.data.labels_file_path)
 
-    data_folder_entries = os.listdir(data_path)
-
-    if (
-        images_folder_name in data_folder_entries
-        and dataset_filename in data_folder_entries
-        and labels_filename in data_folder_entries
-    ):
-        return True
-
-    return False
+    return (
+        os.path.isfile(dataset_file)
+        and os.path.isfile(labels_file)
+        and os.path.isdir(data_path)
+    )
 
 
 def get_training_dataset(cfg: DictConfig) -> Dict[str, Dataset]:
@@ -139,9 +133,8 @@ def get_training_dataset(cfg: DictConfig) -> Dict[str, Dataset]:
     if not data_ready(cfg):
         prepare_dataset(cfg)
 
-    data_path = to_absolute_path(cfg.data.dataset_path)
-    dataset_path = os.path.join(data_path, cfg.data.dataset_filename)
-    data = pd.read_csv(to_absolute_path(dataset_path))
+    dataset_path = to_absolute_path(cfg.data.dataset_file_path)
+    data = pd.read_csv(dataset_path)
 
     train_df, valid_df = train_test_split(
         data,
@@ -179,18 +172,15 @@ def prepare_dataset(cfg: DictConfig) -> None:
         Images folder not found
     """
     data_path = to_absolute_path(cfg.data.dataset_path)
-    images_folder_name = cfg.data.images_folder_name
-    images_folder_path = os.path.join(data_path, images_folder_name)
-    dataset_filename = cfg.data.dataset_filename
-    labels_filename = cfg.data.labels_filename
-    num_files_total = sum(
-        [len(files) for root, dirs, files in os.walk(images_folder_path)]
-    )
+    dataset_file = to_absolute_path(cfg.data.dataset_file_path)
+    labels_file = to_absolute_path(cfg.data.labels_file_path)
 
-    data_folder_entries = os.listdir(data_path)
+    num_files_total = sum([len(files) for _, _, files in os.walk(data_path)])
 
-    if images_folder_name not in data_folder_entries:
-        raise Exception("Cannot generate a dataset, images folder not found.")
+    if not os.path.isdir(data_path):
+        raise Exception(
+            "Cannot generate a dataset, data is not found. " + "Check the data path."
+        )
 
     image_paths = []
     image_classes = []
@@ -198,14 +188,14 @@ def prepare_dataset(cfg: DictConfig) -> None:
     get_logger().info("Generating dataset...")
     progress_bar = tqdm(total=num_files_total)
 
-    for root, _, files in os.walk(images_folder_path):
+    for root, _, files in os.walk(data_path):
         for cur_file_name in files:
             # Check that the file is in fact an image
             file_ext = cur_file_name.split(".")[-1]
             if file_ext.lower() not in ["png", "jpeg", "jpg"]:
                 continue
 
-            cur_dir_name = os.path.basename(root.replace(images_folder_path, ""))
+            cur_dir_name = os.path.basename(root.replace(data_path, ""))
             if cur_dir_name == "":
                 continue
 
@@ -236,13 +226,11 @@ def prepare_dataset(cfg: DictConfig) -> None:
         np.column_stack([image_paths, image_labels]),
         columns=["image", "label"],
     )
-    dataset_file_path = os.path.join(data_path, dataset_filename)
-    dataset.to_csv(dataset_file_path, index=False)
-    get_logger().info("Dataset file created: %s", dataset_file_path)
+    dataset.to_csv(dataset_file, index=False)
+    get_logger().info("Dataset file created: %s", dataset_file)
 
     # Save class names to labels mapping
     tag2label = dict(zip(data_classes, data_labels))
-    tag2label_file_path = os.path.join(data_path, labels_filename)
-    with open(tag2label_file_path, "w") as json_file:
+    with open(labels_file, "w") as json_file:
         json.dump(tag2label, json_file, indent=4)
-    get_logger().info("Labels file created: %s", tag2label_file_path)
+    get_logger().info("Labels file created: %s", labels_file)

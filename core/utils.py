@@ -145,8 +145,7 @@ def save_model(model: pl.LightningModule, cfg: DictConfig) -> None:
 
     torch.save(model, best_model_path)
 
-    data_path = to_absolute_path(cfg.data.dataset_path)
-    labels_origin_path = os.path.join(data_path, cfg.data.labels_filename)
+    labels_origin_path = to_absolute_path(cfg.data.labels_file_path)
     copyfile(labels_origin_path, labels_path)
 
 

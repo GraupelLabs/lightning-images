@@ -63,11 +63,10 @@ callbacks:
       save_top_k: 1
 data:
   batch_size: 64
-  dataset_filename: dataset.csv
-  dataset_path: data/
-  images_folder_name: images
+  dataset_file_path: data/dataset.csv
+  dataset_path: data/images
   image_size: 224
-  labels_filename: tag2class.json
+  labels_file_path: data/tag2class.json
   num_classes: 22
   num_workers: 0
   validation_split: 0.15
@@ -82,7 +81,7 @@ logging:
   logs_dir: logs/
   best_model_path: best_model/
   best_model_name: model.pth
-  best_model_labels: ${data.labels_filename}
+  best_model_labels: tag2class.json
   checkpoints_path: saved_models/
 model:
   backbone:

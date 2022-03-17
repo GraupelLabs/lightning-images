@@ -1,6 +1,7 @@
 # Project related files and folders
 data/
 outputs/
+config.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
