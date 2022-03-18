@@ -143,7 +143,14 @@ def save_model(model: pl.LightningModule, cfg: DictConfig) -> None:
     if not os.path.exists(best_model_folder):
         os.makedirs(best_model_folder)
 
-    torch.save(model, best_model_path)
+    model.eval()
+
+    trimmed_model = torch.jit.trace(
+        model,
+        torch.rand(1, 3, cfg.data.image_size, cfg.data.image_size),
+    )
+
+    torch.jit.save(trimmed_model, best_model_path)
 
     labels_origin_path = to_absolute_path(cfg.data.labels_file_path)
     copyfile(labels_origin_path, labels_path)
