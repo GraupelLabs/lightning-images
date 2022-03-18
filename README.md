@@ -66,5 +66,10 @@ grid datastore create /path/to/data --name cifar5
 ## Model evaluation
 
 ```bash
-python evaluation.py data.num_workers=10 data.batch_size=32 logging.best_model_path=outputs/2022-03-16/17-15-03/best_model/
+python evaluation.py \
+    data.num_workers=10 \
+    data.batch_size=32 \
+    data.dataset_path=/path/to/data \
+    logging.best_model_path=outputs/2022-03-18/01-42-49/best_model \
+    trainer.gpus=1 \
 ```
