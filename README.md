@@ -3,10 +3,11 @@ Training scripts for an end-to-end image classification based on Pytorch-Lightni
 
 ## Activate environment
 1. Install [pipenv](https://pipenv.pypa.io/en/latest/install/)
-2. Install python packages
+2. Install python packages and activate the shell
 
     ```
     pipenv install
+    pipenv shell
     ```
 
 3. Freeze pip dependencies (for cloud training only)
@@ -18,7 +19,7 @@ Training scripts for an end-to-end image classification based on Pytorch-Lightni
 
 ### Locally
 
-First, create a config.yaml file by copying the template file:
+First, create a config.yaml file from the template:
 
 ```bash
 cp config.template.yaml config.yaml
@@ -29,11 +30,12 @@ To start training locally, execute the [training.py](training.py) script and pas
 ```bash
 python training.py \
     data.num_workers=10 \
-    data.batch_size=128 \
+    data.batch_size=32 \
+    data.num_classes=10 \
     data.dataset_path=/path/to/data
 ```
 
-For more parameters, check [config.yml](config.yaml).
+For more parameters, check [config.template.yaml](config.template.yaml).
 
 ### Cloud
 
@@ -49,6 +51,7 @@ grid run --name --localdir \
     training.py \
     data.num_workers=10 \
     data.batch_size=128 \
+    data.num_classes=10 \
     data.dataset_path=/datastores/cifar5 \
     trainer.gpus=2
 ```

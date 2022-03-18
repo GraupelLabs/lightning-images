@@ -29,6 +29,9 @@ augmentations:
               - transform: A.ToGray
               - transform: A.RGBShift
               - transform: A.ChannelShuffle
+          - transform: A.VerticalFlip
+          - transform: A.HorizontalFlip
+          - transform: A.RandomRotate90
           - transform: A.RandomBrightnessContrast
             brightness_limit: 0.5
             contrast_limit: 0.5
@@ -67,7 +70,7 @@ data:
   dataset_path: data/images
   image_size: 224
   labels_file_path: data/tag2class.json
-  num_classes: 22
+  num_classes: 10
   num_workers: 0
   validation_split: 0.15
 debug:
@@ -105,6 +108,7 @@ trainer:
   strategy: dp
   gpus: 1
   gradient_clip_val: 0.5
+  log_every_n_steps: 50
   num_sanity_val_steps: 0
   profiler: false
   enable_model_summary: ${debug.enabled}
