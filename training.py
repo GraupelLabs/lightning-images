@@ -70,12 +70,12 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
     ][0]
     best_checkpoint_path = checkpoints_callback.best_model_path
-    get_logger().info(f"Best checkpoint: {best_checkpoint_path}")
+    get_logger().debug(f"Best checkpoint: {best_checkpoint_path}")
 
     stage1_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
     )
-    get_logger().info(f"Renaming to: {stage1_checkpoint_path}")
+    get_logger().debug(f"Renaming to: {stage1_checkpoint_path}")
     shutil.copyfile(best_checkpoint_path, stage1_checkpoint_path)
 
     return classifier
@@ -137,12 +137,12 @@ def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
     ][0]
     best_checkpoint_path = checkpoints_callback.best_model_path
-    get_logger().info(f"Best checkpoint: {best_checkpoint_path}")
+    get_logger().debug(f"Best checkpoint: {best_checkpoint_path}")
 
     stage2_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
     )
-    get_logger().info(f"Renaming to: {stage2_checkpoint_path}")
+    get_logger().debug(f"Renaming to: {stage2_checkpoint_path}")
     shutil.copyfile(best_checkpoint_path, stage2_checkpoint_path)
 
 
