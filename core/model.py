@@ -14,7 +14,7 @@ from torch import nn
 from torchmetrics import Accuracy
 
 from .dataset import get_training_dataset
-from .logger import get_logger
+from .logger import logger
 from .utils import collate_fn, load_obj
 
 
@@ -127,7 +127,7 @@ class ImageClassifier(LightningModule):
 
     def prepare_data(self):
         """TODO Add missing docstring."""
-        get_logger().info("Loading training dataset...")
+        logger.info("Loading training dataset...")
         datasets = get_training_dataset(self.cfg)
         self.train_dataset = datasets["train"]
         self.valid_dataset = datasets["valid"]
@@ -190,7 +190,12 @@ class ImageClassifier(LightningModule):
         val_loss = self.criterion(labels_predicted, labels)
         self.accuracy(labels_predicted, labels)
         self.log(
-            "val_loss", val_loss, on_epoch=True, prog_bar=True, batch_size=batch_size
+            "val_loss",
+            val_loss,
+            on_epoch=True,
+            prog_bar=True,
+            batch_size=batch_size,
+            logger=True,
         )
         self.log(
             "val_acc",
@@ -198,6 +203,7 @@ class ImageClassifier(LightningModule):
             on_epoch=True,
             prog_bar=True,
             batch_size=batch_size,
+            logger=True,
         )
 
         return val_loss

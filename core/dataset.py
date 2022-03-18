@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from .logger import get_logger
+from .logger import logger
 from .utils import load_augmentations
 
 
@@ -185,7 +185,7 @@ def prepare_dataset(cfg: DictConfig) -> None:
     image_paths = []
     image_classes = []
 
-    get_logger().info("Generating dataset...")
+    logger.info("Generating dataset...")
     progress_bar = tqdm(total=num_files_total)
 
     for root, _, files in os.walk(data_path):
@@ -227,10 +227,10 @@ def prepare_dataset(cfg: DictConfig) -> None:
         columns=["image", "label"],
     )
     dataset.to_csv(dataset_file, index=False)
-    get_logger().info("Dataset file created: %s", dataset_file)
+    logger.info("Dataset file created: %s", dataset_file)
 
     # Save class names to labels mapping
     tag2label = dict(zip(data_classes, data_labels))
     with open(labels_file, "w") as json_file:
         json.dump(tag2label, json_file, indent=4)
-    get_logger().info("Labels file created: %s", labels_file)
+    logger.info("Labels file created: %s", labels_file)

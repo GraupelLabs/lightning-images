@@ -16,7 +16,7 @@ from sklearn.metrics import classification_report
 from tqdm import tqdm
 
 from core.dataset import get_training_dataset
-from core.logger import get_logger
+from core.logger import logger
 from core.utils import collate_fn, set_seed, create_class_mapping
 
 
@@ -95,17 +95,17 @@ def main(cfg: DictConfig) -> None:
         cfg.logging.best_model_name,
     )
 
-    model = torch.load(model_path, map_location=device)
+    model = torch.jit.load(model_path, map_location=device)
     model.eval()
 
     dataset = get_training_dataset(cfg)
     test_dataset = dataset["valid"]
 
-    get_logger().info("Evaluating the test data...")
+    logger.info("Evaluating the test data...")
     classification_report = run_predictions(cfg, model, test_dataset)
 
-    print(classification_report)
-    print()
+    logger.info(classification_report)
+    logger.info("")
 
 
 if __name__ == "__main__":

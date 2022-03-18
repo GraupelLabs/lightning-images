@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 from omegaconf import DictConfig
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from core.logger import get_logger
+from core.logger import logger
 from core.model import ImageClassifier
 from core.utils import save_model, set_seed
 
@@ -37,7 +37,7 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
     loggers = classifier.get_loggers()
 
     # Stage 1 -- backbone frozen
-    get_logger().info("Stage 1 of the training -- backbone frozen...")
+    logger.info("Stage 1 of the training -- backbone frozen...")
 
     # Freeze backbone parameters
     for param in classifier.feature_extractor.parameters():
@@ -70,12 +70,12 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
     ][0]
     best_checkpoint_path = checkpoints_callback.best_model_path
-    get_logger().debug(f"Best checkpoint: {best_checkpoint_path}")
+    logger.debug(f"Best checkpoint: {best_checkpoint_path}")
 
     stage1_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
     )
-    get_logger().debug(f"Renaming to: {stage1_checkpoint_path}")
+    logger.debug(f"Renaming to: {stage1_checkpoint_path}")
     shutil.copyfile(best_checkpoint_path, stage1_checkpoint_path)
 
     return classifier
@@ -99,7 +99,7 @@ def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
     callbacks = classifier.get_callbacks()
 
     # Stage 2 -- all layers unfrozen
-    get_logger().info("Stage 2 of the training from the best checkpoint.")
+    logger.info("Stage 2 of the training from the best checkpoint.")
 
     # Unfreeze backbone parameters
     for param in classifier.feature_extractor.parameters():
@@ -137,12 +137,12 @@ def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
     ][0]
     best_checkpoint_path = checkpoints_callback.best_model_path
-    get_logger().debug(f"Best checkpoint: {best_checkpoint_path}")
+    logger.debug(f"Best checkpoint: {best_checkpoint_path}")
 
     stage2_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
     )
-    get_logger().debug(f"Renaming to: {stage2_checkpoint_path}")
+    logger.debug(f"Renaming to: {stage2_checkpoint_path}")
     shutil.copyfile(best_checkpoint_path, stage2_checkpoint_path)
 
 
@@ -155,7 +155,7 @@ def save_best_model(cfg: DictConfig) -> None:
     cfg : DictConfig
         Project configuration object
     """
-    get_logger().info("Saving model from the best checkpoint...")
+    logger.info("Saving model from the best checkpoint...")
 
     best_model_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
@@ -163,7 +163,7 @@ def save_best_model(cfg: DictConfig) -> None:
     model = ImageClassifier.load_from_checkpoint(best_model_path, cfg=cfg)
     save_model(model, cfg)
 
-    get_logger().info("Done!")
+    logger.info("Done!")
 
 
 @hydra.main(config_path="./", config_name="config")
