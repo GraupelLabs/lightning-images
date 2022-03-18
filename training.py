@@ -2,17 +2,21 @@
 
 """Model training entry point."""
 
-import hydra
 import os
-import pytorch_lightning as pl
+import shutil
 import resource
 
+import hydra
+import pytorch_lightning as pl
 from omegaconf import DictConfig
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from core.logger import get_logger
 from core.model import ImageClassifier
 from core.utils import save_model, set_seed
+
+FIRST_STAGE_DEBUG_EPOCHS = 2
+SECOND_STAGE_DEBUG_EPOCHS = 2
 
 
 def train_first_stage(cfg: DictConfig) -> ImageClassifier:
@@ -43,10 +47,20 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
     for param in classifier.classifier.parameters():
         param.requires_grad = True
 
+    epochs = (
+        FIRST_STAGE_DEBUG_EPOCHS
+        if cfg.training.debug
+        else cfg.training_first_stage_epochs
+    )
+
+    # Set logging steps to as fewer if possible if debugging
+    if cfg.training.debug:
+        cfg.trainer.log_every_n_steps = 1
+
     trainer = pl.Trainer(
         logger=loggers,
         callbacks=callbacks,
-        max_epochs=cfg.training.first_stage.epochs,
+        max_epochs=epochs,
         **cfg.trainer,
     )
     trainer.fit(classifier)
@@ -54,14 +68,15 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
     # Rename best checkpoint for the stage 1
     checkpoints_callback = [
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
-    ]
-    best_checkpoint_path = checkpoints_callback[0].best_model_path
-    get_logger().debug("Best checkpoint: ", best_checkpoint_path)
+    ][0]
+    best_checkpoint_path = checkpoints_callback.best_model_path
+    get_logger().info(f"Best checkpoint: {best_checkpoint_path}")
 
     stage1_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
     )
-    os.rename(best_checkpoint_path, stage1_checkpoint_path)
+    get_logger().info(f"Renaming to: {stage1_checkpoint_path}")
+    shutil.copyfile(best_checkpoint_path, stage1_checkpoint_path)
 
     return classifier
 
@@ -94,11 +109,19 @@ def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
     # decent convergence
     cfg.optimizer.params.lr = cfg.training.second_stage.learning_rate
 
-    max_epochs = cfg.training.first_stage.epochs + cfg.training.second_stage.epochs
+    max_epochs = (
+        FIRST_STAGE_DEBUG_EPOCHS + SECOND_STAGE_DEBUG_EPOCHS
+        if cfg.training.debug
+        else cfg.training.first_stage.epochs + cfg.training.second_stage.epochs
+    )
 
     best_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.first_stage.best_model_name
     )
+
+    # Set logging steps to as fewer if possible if debugging
+    if cfg.training.debug:
+        cfg.trainer.log_every_n_steps = 1
 
     trainer = pl.Trainer(
         logger=loggers,
@@ -112,14 +135,15 @@ def train_second_stage(cfg: DictConfig, classifier: ImageClassifier) -> None:
     # Rename best checkpoint for the stage 1
     checkpoints_callback = [
         callback for callback in callbacks if isinstance(callback, ModelCheckpoint)
-    ]
-    best_checkpoint_path = checkpoints_callback[0].best_model_path
-    get_logger().debug("Best checkpoint: ", best_checkpoint_path)
+    ][0]
+    best_checkpoint_path = checkpoints_callback.best_model_path
+    get_logger().info(f"Best checkpoint: {best_checkpoint_path}")
 
     stage2_checkpoint_path = os.path.join(
         cfg.logging.checkpoints_path, cfg.training.second_stage.best_model_name
     )
-    os.rename(best_checkpoint_path, stage2_checkpoint_path)
+    get_logger().info(f"Renaming to: {stage2_checkpoint_path}")
+    shutil.copyfile(best_checkpoint_path, stage2_checkpoint_path)
 
 
 def save_best_model(cfg: DictConfig) -> None:
@@ -138,6 +162,8 @@ def save_best_model(cfg: DictConfig) -> None:
     )
     model = ImageClassifier.load_from_checkpoint(best_model_path, cfg=cfg)
     save_model(model, cfg)
+
+    get_logger().info("Done!")
 
 
 @hydra.main(config_path="./", config_name="config")
