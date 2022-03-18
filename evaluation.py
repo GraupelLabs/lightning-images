@@ -34,7 +34,7 @@ def run_predictions(cfg, model, dataset):
     all_predicted_labels = []
     all_probas = []
 
-    device = torch.device("cuda")
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
     for images, labels, _ in tqdm(data_loadder):
         images = [image.to(device) for image in images]
@@ -89,7 +89,7 @@ def main(cfg: DictConfig) -> None:
     rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
 
-    device = torch.device("cuda")
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model_path = os.path.join(
         to_absolute_path(cfg.logging.best_model_path),
         cfg.logging.best_model_name,
