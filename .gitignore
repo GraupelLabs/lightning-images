@@ -1,6 +1,8 @@
 # Project related files and folders
 data/
 outputs/
+dataset.csv
+tag2class.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

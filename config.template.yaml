@@ -65,11 +65,11 @@ callbacks:
       save_last: True
       save_top_k: 1
 data:
-  batch_size: 64
-  dataset_file_path: data/dataset.csv
+  batch_size: 32
+  dataset_file_path: dataset.csv
   dataset_path: data/images
   image_size: 224
-  labels_file_path: data/tag2class.json
+  labels_file_path: tag2class.json
   num_classes: 10
   num_workers: 0
   validation_split: 0.15
