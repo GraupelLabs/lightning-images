@@ -50,7 +50,7 @@ def train_first_stage(cfg: DictConfig) -> ImageClassifier:
     epochs = (
         FIRST_STAGE_DEBUG_EPOCHS
         if cfg.training.debug
-        else cfg.training_first_stage_epochs
+        else cfg.training.first_stage.epochs
     )
 
     # Set logging steps to as fewer if possible if debugging
